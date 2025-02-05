@@ -1,52 +1,64 @@
-import mysql , { Connection, RowDataPacket } from 'mysql2/promise'
-class BancoMysql{
-    //Atributos de uma classe
-    connection:Connection|null = null
-    
-    //Métodos
-    async criarConexao(){
-        this.connection = await mysql.createConnection({
+import mysql,  { Connection, RowDataPacket } from 'mysql2/promise';
+
+class BancoMysql {
+    // Propriedade
+    private conexao: Promise<Connection>;
+
+    // Métodos
+    constructor() {
+        this.conexao = mysql.createConnection({
             host: process.env.dbhost ? process.env.dbhost : "localhost",
             user: process.env.dbuser ? process.env.dbuser : "root",
             password: process.env.dbpassword ? process.env.dbpassword : "",
             database: process.env.dbname ? process.env.dbname : "banco1022b",
             port: process.env.dbport ? parseInt(process.env.dbport) : 3306
-        })
+        });
     }
-    async consultar(query:string,params?:any[]){
-        if(!this.connection) throw new Error("Erro de conexão com o banco de dados.")
-        const [result, fields] = await this.connection.query(query,params)
-        return result
+
+    async getConnection() {
+        const conn = await this.conexao; 
+        return conn;
     }
-    async finalizarConexao(){
-        if(!this.connection) throw new Error("Erro de conexão com o banco de dados.")
-        await this.connection.end()
+
+    async end() {
+        const conn = await this.conexao; 
+        await conn.end();
     }
+
     async listar(){
-        if(!this.connection) throw new Error("Erro de conexão com o banco de dados.")
-        const [result, fields] = await this.connection.query("SELECT * FROM produtos")
+        const conn = await this.getConnection()
+        const [result, fields] = await conn.query("SELECT * from produtos");
         return result
     }
     async inserir(produto:{id:number,nome:string,descricao:string,preco:string,imagem:string}){
-        if(!this.connection) throw new Error("Erro de conexão com o banco de dados.")
-        const [result, fields] = await this.connection.query("INSERT INTO produtos VALUES (?,?,?,?,?)",[produto.id,produto.nome,produto.descricao,produto.preco,produto.imagem])
+        const conn = await this.getConnection()
+        const sqlQuery = "INSERT INTO produtos (id,nome,descricao,preco,imagem) VALUES (?,?,?,?,?)"
+        const parametro = [produto.id,produto.nome,produto.descricao,produto.preco,produto.imagem]
+        const [result, fields] = await conn.query(sqlQuery,parametro);
         return result
     }
     async excluir(id:string){
-        if(!this.connection) throw new Error("Erro de conexão com o banco de dados.")
-        const [result, fields] = await this.connection.query("DELETE FROM produtos WHERE id = ?",[id])
+        const conn = await this.getConnection()
+        const sqlQuery = "DELETE FROM produtos WHERE id = ?"
+        const parametro = [id]
+        const [result, fields] = await conn.query(sqlQuery,parametro);
         return result
     }
     async alterar(id:string,produto:{id?:string,nome:string,descricao:string,preco:string,imagem:string}){
-        if(!this.connection) throw new Error("Erro de conexão com o banco de dados.")
-        const [result, fields] = await this.connection.query("UPDATE produtos SET nome=?,descricao=?,preco=?,imagem=? WHERE id=?",[produto.nome,produto.descricao,produto.preco,produto.imagem,id])
+        const conn = await this.getConnection()
+        const sqlQuery = "UPDATE produtos SET nome=?,descricao=?,preco=?,imagem=? WHERE id = ?"
+        const parametro = [produto.nome,produto.descricao,produto.preco,produto.imagem,id]
+        const [result, fields] = await conn.query(sqlQuery,parametro);
         return result
     }
     async listarPorId(id:string){
-        if(!this.connection) throw new Error("Erro de conexão com o banco de dados.")
-        const [result, fields] = await this.connection.query("SELECT * FROM produtos WHERE id = ?",[id]) as RowDataPacket[]
+        const conn = await this.getConnection()
+        const sqlQuery = "SELECT * FROM produtos WHERE id = ?"
+        const parametro = [id]
+        const [result, fields] = await conn.query(sqlQuery,parametro) as RowDataPacket[];
+        //Return the first element of the array
         return result[0]
     }
 }
 
-export default BancoMysql
+export default BancoMysql;
